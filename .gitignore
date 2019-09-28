@@ -1,3 +1,5 @@
 config_postgres.sh
 config_spotify.sh
+__pycache__/
+.vscode/
 
