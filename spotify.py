@@ -7,15 +7,13 @@ class SpotifyInterface:
 
     def __init__(self):
         
-        client_credentials_manager = SpotifyClientCredentials()
-        sp = spotipy.Spotify(client_credentials_manager=client_credentials_manager)
-        self.sp = sp
+        self.sp = spotipy.Spotify(client_credentials_manager=SpotifyClientCredentials())
 
     def get_music(self, num_songs=50):
 
         num_items = num_songs//2 + 1
-        album_songs = self.get_albums(num_items)
-        playlist_songs = self.get_playlists(num_items)
+        album_songs = self.get_albums(num_items=num_items)
+        playlist_songs = self.get_playlists(num_items=num_items)
         songs = album_songs + playlist_songs
         shuffle(songs)
         if (len(songs) > num_songs):
@@ -23,7 +21,7 @@ class SpotifyInterface:
         else:
             return songs
 
-    def get_albums(self, num_items=20, num_tracks=50):
+    def get_albums(self, num_items=20, num_tracks=float('Inf')):
         
         new_releases = self.sp.new_releases(limit=num_items)
         new_albums = new_releases['albums']['items']
@@ -46,7 +44,7 @@ class SpotifyInterface:
                 
         return track_data
 
-    def get_playlists(self, num_items=20, num_tracks=50):
+    def get_playlists(self, num_items=20, num_tracks=float('Inf')):
 
         featured_playlists = self.sp.featured_playlists(limit=num_items)
         new_playlists = featured_playlists['playlists']['items']
@@ -106,7 +104,6 @@ def main():
 
     si = SpotifyInterface()
     songs = si.get_playlists(num_items=1, num_tracks=1)
-    # print(songs)
     print(len(songs))
     print(songs[0].keys())
 
