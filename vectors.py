@@ -1,24 +1,44 @@
 import numpy as np
 
 
-def compute_vector(features, mode='gauss'):
+def vector_processor(method='gauss'):
+    '''
+    Returns the function to compute the embedding vector for a given method.
+    Since Spark UDF does not accept keyword arguments, the method keyword 
+    argument is seperated from function that computes the vector by placing it 
+    within this function.
+    '''
 
-    vector = []
+    def compute_vector(*features):
 
-    if (mode == 'gauss'):
-        vector = gauss_vector(features)
-    elif (mode == 'gmm'):
-        vector = gmm_vector(features)
-    elif (mode == 'pca'):
-        vector = pca_vector(features)
+        vector = []
 
-    if vector:
-        return vector.tolist()
-    else:
-        return None
+        for feature in features:
+
+            if (method == 'gauss'):
+                vec = gauss_vector(feature)
+            elif (method == 'gmm'):
+                vec = gmm_vector(feature)
+            elif (method == 'pca'):
+                vec = pca_vector(feature)
+
+            if (vec is not None):
+                vector += vec.tolist()
+
+        if vector:
+            return vector
+        else:
+            return None
+
+    return compute_vector
 
 def gauss_vector(features):
-    
+    '''
+    Computes a vector containing the mean and the upper triangle of the 
+    covariance matrix of the features.
+    '''
+
+
     mean = np.mean(features, axis=0)
     covar = np.cov(features, rowvar=False)
     vec = mean
