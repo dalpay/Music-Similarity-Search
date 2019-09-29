@@ -13,9 +13,9 @@ class MSDInterface:
         root_path = '/home/ubuntu/msd/data/'
         self.root_path = root_path
 
-    def get_music(self, num_songs=50, all_data=True):
+    def get_music(self, num_songs=50):
 
-        files_list = self.get_files(all_data=all_data, num_songs=num_songs)
+        files_list = self.get_files(num_songs=num_songs, all_data=True)
         song_data = [self.process_song(file) for file in files_list]
 
         return song_data
@@ -45,20 +45,24 @@ class MSDInterface:
         artist_name = h5.get_artist_name(song_data).decode('UTF-8')
         song_year = int(h5.get_year(song_data))
         
-        timbre = h5.get_segments_timbre(song_data)
-        chroma = h5.get_segments_pitches(song_data)
+        timbre = self.ndarray_list_to_ndlist(h5.get_segments_timbre(song_data))
+        chroma = self.ndarray_list_to_ndlist(h5.get_segments_pitches(song_data))
         
         song_data.close()
         song_dict = {'id': song_id, 'name': song_name, 'artist': artist_name, 
                     'year': song_year, 'timbre': timbre, 'chroma': chroma}
         return song_dict
 
+    def ndarray_list_to_ndlist(self, ndarry_list):
+
+        ndlist = [ndarr.tolist() for ndarr in ndarry_list]
+        
+        return ndlist
 
 def main():
 
     msdi = MSDInterface()
     songs = msdi.get_music(all_data=False, num_songs=3)
-    print(songs)
     print(len(songs))
     print(songs[0].keys())
 
