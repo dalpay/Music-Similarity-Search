@@ -16,14 +16,16 @@ class MSDInterface:
         self.root_path = '/home/ubuntu/msd/data/'
         self.subset_path = 'A/A/A/'
         
-    def get_music(self, num_songs=50):
+    def get_music(self, num_songs=50, all_songs=False):
 
-        files_list = self.get_files(num_songs=num_songs, all_data=True)
-        song_data = [self.process_song(file) for file in files_list]
+        files_list = self.get_files(all_data=True)
+        if (not all_songs and len(files_list) > num_songs):
+            files_list = files_list[:num_songs]
+        songs = [self.process_song(file) for file in files_list]
 
-        return song_data
+        return songs
 
-    def get_files(self, all_data=False, num_songs=20):
+    def get_files(self, all_data=False):
         
         data_path = self.root_path if all_data else os.path.join(self.root_path, self.subset_path)
 
@@ -33,10 +35,7 @@ class MSDInterface:
             files_subset = [os.path.join(root, f) for f in files if f.endswith('.h5')]
             files_list += files_subset
 
-        if (len(files_list) > num_songs):
-            return files_list[:num_songs]
-        else:
-            return files_list
+        return files_list
 
     def process_song(self, song_path):
 
