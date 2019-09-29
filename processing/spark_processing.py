@@ -1,5 +1,6 @@
 import os
 import sys
+import argparse
 
 from msd import MSDInterface
 from spotify import SpotifyInterface
@@ -40,7 +41,7 @@ class MusicProcessor:
         if (data_source == 'msd'):
             self.interface = MSDInterface()
         elif (data_source == 'spotify'):
-            self.interface == SpotifyInterface()
+            self.interface = SpotifyInterface()
 
     def run_batch_process(self):
         '''
@@ -66,16 +67,38 @@ class MusicProcessor:
         print(song_vec_df.show(10))
         
         # Write DFs to DB
-        self.db_writer.write(song_info_df, 'table_name', mode='append')
-        self.db_writer.write(song_info_df, 'table_name', mode='append')
+        # self.db_writer.write(song_info_df, 'table_name', mode='append')
+        # self.db_writer.write(song_info_df, 'table_name', mode='append')
 
+def get_parser():
+
+    parser = argparse.ArgumentParser(
+        description='Processes songs retrieved from either MSD or Spotify'
+    )
+    parser.add_argument('-n', '--number', 
+        help='Specify the number of songs to retrieve from the data source', 
+        required=True, type=int
+    )
+    parser.add_argument('-s', '--source',  
+        help='Select either "msd" or "spotify" as the data source', 
+        choices=['msd', 'spotify'],
+        required=True, type=str
+    )
+    parser.add_argument('-m', '--method', 
+        help='Select the method to process the songs with',
+        choices=['gauss', 'gmm', 'pca'], 
+        default='gauss', type=str
+    )
+
+    return parser
 
 def main():  
     
-    num_songs = 10
-    source = 'msd'
-    method = 'gauss'
-    music_processor = MusicProcessor(num_songs=num_songs, data_source=source, vector_method=method)
+    parser = get_parser()
+    args = parser.parse_args()
+    music_processor = MusicProcessor(num_songs=args.number, 
+                                data_source=args.source, 
+                                vector_method=args.method)
     music_processor.run_batch_process()
 
 if (__name__ == '__main__'):
