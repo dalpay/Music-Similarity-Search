@@ -21,6 +21,12 @@ from pyspark.sql.functions import monotonically_increasing_id
 
 
 class MusicProcessor:
+    '''
+    Retrieves a number of songs from either the Million Song Dataset or the 
+    Spotify API, distributes the processing of each song across Spark workers
+    to extract the embedding vector of each song, and writes the song 
+    information and embedding vectors to a Postgres DB. 
+    '''
 
     def __init__(self, num_songs, data_source, vector_method):
 
@@ -29,6 +35,7 @@ class MusicProcessor:
         self.vector_method = vector_method
 
         self.spark = SparkSession.builder.appName('MusicSimilarity').getOrCreate()
+        self.db_writer = PostgresConnector()
 
         if (data_source == 'msd'):
             self.interface = MSDInterface()
@@ -36,28 +43,31 @@ class MusicProcessor:
             self.interface == SpotifyInterface()
 
     def run_batch_process(self):
+        '''
+        
+        '''
 
+        # Retrieve songs from interface and construct DF
         song_data_list = self.interface.get_music(num_songs=self.num_songs)
         song_data_df = self.spark.createDataFrame(Row(**song_dict) for song_dict in song_data_list)
         song_data_df = song_data_df.withColumn('id', monotonically_increasing_id())
         print(song_data_df.show(10))
 
+        # Build song information DF
         song_info_df = song_data_df.select('id', 'name', 'artist', 'year')
         song_info_df = song_info_df.withColumn('source', lit(self.data_source))
         print(song_info_df.show(10))
 
+        # Build song vector DF
         comp_vec_udf = udf(vector_processor(method=self.vector_method), returnType=ArrayType(DoubleType()))
         song_vec_df = song_data_df.withColumn('vector', comp_vec_udf('timbre', 'chroma'))
         song_vec_df = song_vec_df.select('id', 'vector')
         song_vec_df = song_vec_df.withColumn('method', lit(self.vector_method))  
         print(song_vec_df.show(10))
         
-        return song_data_df
-
-    def write_to_db(self, dataframe, table_name):
-
-        connector = PostgresConnector()
-        connector.write(dataframe, table_name, mode='append')
+        # Write DFs to DB
+        self.db_writer.write(song_info_df, 'table_name', mode='append')
+        self.db_writer.write(song_info_df, 'table_name', mode='append')
 
 
 def main():  

@@ -7,12 +7,15 @@ import hdf5_getters as h5
 
 
 class MSDInterface:
-
+    '''
+    Retrieves song data from the Million Song Dataset.
+    '''
+    
     def __init__(self):
 
-        root_path = '/home/ubuntu/msd/data/'
-        self.root_path = root_path
-
+        self.root_path = '/home/ubuntu/msd/data/'
+        self.subset_path = 'A/A/A/'
+        
     def get_music(self, num_songs=50):
 
         files_list = self.get_files(num_songs=num_songs, all_data=True)
@@ -21,9 +24,8 @@ class MSDInterface:
         return song_data
 
     def get_files(self, all_data=False, num_songs=20):
-
-        subset_path = 'A/A/A/'
-        data_path = self.root_path if all_data else os.path.join(self.root_path, subset_path)
+        
+        data_path = self.root_path if all_data else os.path.join(self.root_path, self.subset_path)
 
         files_list = []
         for root, dirs, files in os.walk(data_path):

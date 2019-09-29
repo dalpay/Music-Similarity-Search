@@ -38,7 +38,6 @@ def gauss_vector(features):
     covariance matrix of the features.
     '''
 
-
     mean = np.mean(features, axis=0)
     covar = np.cov(features, rowvar=False)
     vec = mean
@@ -51,9 +50,17 @@ def gauss_vector(features):
     return vec
 
 def gmm_vector(features):
+    '''
+    Not yet supported.
+    Computes a vector containing the means of the GMM clusters of the features.
+    '''
 
     return None
 
 def pca_vector(features):
+    '''
+    Not yet supported.
+    Computes a vector containing the PCA reduced features.
+    '''
 
     return None

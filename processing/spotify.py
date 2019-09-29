@@ -4,6 +4,11 @@ from spotipy.oauth2 import SpotifyClientCredentials
 
 
 class SpotifyInterface:
+    '''
+    Retrieves song data from recent album releases and featured playlists from 
+    the Spotify API. The client id and password are exported as environment 
+    variables to bypass the client credentials manager.
+    '''
 
     def __init__(self):
         
