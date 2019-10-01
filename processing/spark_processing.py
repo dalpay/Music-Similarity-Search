@@ -1,6 +1,10 @@
+#!/usr/bin/env python3
+
 import os
 import sys
 import argparse
+import faiss
+import numpy as np
 
 from msd import MSDInterface
 from spotify import SpotifyInterface
@@ -10,11 +14,7 @@ from vectors import vector_processor
 from pyspark import SparkFiles
 from pyspark.sql import Row
 from pyspark.sql import SparkSession
-from pyspark.sql.types import StructField
-from pyspark.sql.types import StructType
-from pyspark.sql.types import StringType
 from pyspark.sql.types import DoubleType
-from pyspark.sql.types import IntegerType
 from pyspark.sql.types import ArrayType
 from pyspark.sql.functions import lit
 from pyspark.sql.functions import udf
@@ -36,7 +36,9 @@ class MusicProcessor:
         self.vector_method = vector_method
 
         self.spark = SparkSession.builder.appName('MusicSimilarity').getOrCreate()
-        self.db_writer = PostgresConnector()
+        self.spark.sparkContext.addPyFile('vectors.py')
+
+        # self.db_writer = PostgresConnector()
 
         if (data_source == 'msd'):
             self.interface = MSDInterface()
@@ -44,31 +46,50 @@ class MusicProcessor:
             self.interface = SpotifyInterface()
 
     def run_batch_process(self):
-        '''
         
-        '''
-
         # Retrieve songs from interface and construct DF
         song_data_list = self.interface.get_music(num_songs=self.num_songs)
         song_data_df = self.spark.createDataFrame(Row(**song_dict) for song_dict in song_data_list)
         song_data_df = song_data_df.withColumn('id', monotonically_increasing_id())
-        print(song_data_df.show(10))
 
         # Build song information DF
         song_info_df = song_data_df.select('id', 'name', 'artist', 'year')
         song_info_df = song_info_df.withColumn('source', lit(self.data_source))
-        print(song_info_df.show(10))
 
         # Build song vector DF
         comp_vec_udf = udf(vector_processor(method=self.vector_method), returnType=ArrayType(DoubleType()))
         song_vec_df = song_data_df.withColumn('vector', comp_vec_udf('timbre', 'chroma'))
         song_vec_df = song_vec_df.select('id', 'vector')
-        song_vec_df = song_vec_df.withColumn('method', lit(self.vector_method))  
-        print(song_vec_df.show(10))
-        
+        song_vec_df = song_vec_df.withColumn('method', lit(self.vector_method))
+
         # Write DFs to DB
         # self.db_writer.write(song_info_df, 'table_name', mode='append')
         # self.db_writer.write(song_info_df, 'table_name', mode='append')
+
+        # Write vectors to the similarity search index
+        self.write_to_faiss(song_vec_df)
+
+    def write_to_faiss(self, vec_df):
+
+        index_filename = self.data_source + '_' + self.vector_method + '.index'
+        
+        if (os.path.isfile(index_filename)):
+            index = faiss.read_index(index_filename)
+        else:
+            sample_vec = vec_df.limit(1).collect()[0].vector
+            num_dimensions = len(sample_vec)
+            index_key = 'IDMap,ITQ,LSH'
+            index = faiss.index_factory(num_dimensions, index_key)
+        
+        vec_table = vec_df.select('id', 'vector').collect()
+        ids_list = [row.id for row in vec_table]
+        vecs_list = [row.vector for row in vec_table]
+        ids_arr = np.array(ids_list, copy=False, dtype=np.int64)
+        vecs_arr = np.array(vecs_list, copy=False, dtype=np.float32)
+
+        index.train(vecs_arr)
+        index.add_with_ids(vecs_arr, ids_arr)
+        faiss.write_index(index, index_filename)
 
 def get_parser():
 
