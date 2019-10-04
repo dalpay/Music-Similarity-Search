@@ -38,7 +38,7 @@ class MusicProcessor:
         self.spark = SparkSession.builder.appName('MusicSimilarity').getOrCreate()
         self.spark.sparkContext.addPyFile('vectors.py')
 
-        # self.db_writer = PostgresConnector()
+        self.db_writer = PostgresConnector()
 
         if (data_source == 'msd'):
             self.interface = MSDInterface()
@@ -48,26 +48,27 @@ class MusicProcessor:
     def run_batch_process(self):
         
         # Retrieve songs from interface and construct DF
-        song_data_list = self.interface.get_music(num_songs=self.num_songs)
+        song_data_list = self.interface.get_music(num_songs=self.num_songs, all_songs=True)
         song_data_df = self.spark.createDataFrame(Row(**song_dict) for song_dict in song_data_list)
-        song_data_df = song_data_df.withColumn('id', monotonically_increasing_id())
+        song_data_df = song_data_df.withColumnRenamed('id', 'source_id')
+        song_data_df = song_data_df.withColumn('song_id', monotonically_increasing_id())
 
         # Build song information DF
-        song_info_df = song_data_df.select('id', 'name', 'artist', 'year')
+        song_info_df = song_data_df.select('song_id', 'source_id', 'name', 'artist', 'year')
         song_info_df = song_info_df.withColumn('source', lit(self.data_source))
 
         # Build song vector DF
         comp_vec_udf = udf(vector_processor(method=self.vector_method), returnType=ArrayType(DoubleType()))
         song_vec_df = song_data_df.withColumn('vector', comp_vec_udf('timbre', 'chroma'))
-        song_vec_df = song_vec_df.select('id', 'vector')
+        song_vec_df = song_vec_df.select('song_id', 'vector')
         song_vec_df = song_vec_df.withColumn('method', lit(self.vector_method))
-
-        # Write DFs to DB
-        # self.db_writer.write(song_info_df, 'table_name', mode='append')
-        # self.db_writer.write(song_info_df, 'table_name', mode='append')
 
         # Write vectors to the similarity search index
         self.write_to_faiss(song_vec_df)
+
+        # Write DFs to DB
+        self.db_writer.write(song_info_df, 'song_info', mode='append')
+        self.db_writer.write(song_vec_df, 'song_vectors', mode='append')
 
     def write_to_faiss(self, vec_df):
 
