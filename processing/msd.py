@@ -11,11 +11,6 @@ class MSDInterface:
     Retrieves song data from the Million Song Dataset.
     '''
     
-    def __init__(self):
-
-        self.root_path = '/home/ubuntu/msd/data/'
-        self.subset_path = 'A/A/A/'
-        
     def get_music(self, num_songs=50, all_songs=False):
 
         files_list = self.get_files(all_data=True)
@@ -27,7 +22,10 @@ class MSDInterface:
 
     def get_files(self, all_data=False):
         
-        data_path = self.root_path if all_data else os.path.join(self.root_path, self.subset_path)
+        root_path = '/home/ubuntu/msd/data/'
+        subset_path = 'A/A/A/'
+
+        data_path = root_path if all_data else os.path.join(root_path, subset_path)
 
         files_list = []
         for root, dirs, files in os.walk(data_path):

@@ -14,7 +14,7 @@ class SpotifyInterface:
         
         self.sp = spotipy.Spotify(client_credentials_manager=SpotifyClientCredentials())
 
-    def get_music(self, num_songs=50, all_songs=False):
+    def get_music(self, num_songs=50, all_songs=True):
 
         num_items = num_songs//2 + 1
         album_songs = self.get_albums(num_items=num_items)
