@@ -1,7 +1,7 @@
 -- PostgreSQL database tables creation
 
 CREATE TABLE song_info (
-    song_id     BIGINT PRIMARY KEY,
+    id          BIGINT PRIMARY KEY,
     source_id   VARCHAR(255) NOT NULL,
     name        VARCHAR(255) NOT NULL, 
     artist      VARCHAR(255) NOT NULL,
@@ -10,7 +10,7 @@ CREATE TABLE song_info (
 );
 
 CREATE TABLE song_vectors (
-    song_id     BIGINT PRIMARY KEY,
+    id          BIGINT PRIMARY KEY,
     vector      FLOAT(32)[] NOT NULL,
     method      VARCHAR(255) CHECK (method in ('gauss', 'gmm', 'pca', 'cnn'))
 );

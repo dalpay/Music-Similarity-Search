@@ -14,6 +14,7 @@ from vectors import vector_processor
 from pyspark import SparkFiles
 from pyspark.sql import Row
 from pyspark.sql import SparkSession
+from pyspark.sql.types import IntegerType
 from pyspark.sql.types import DoubleType
 from pyspark.sql.types import ArrayType
 from pyspark.sql.functions import lit
@@ -48,19 +49,22 @@ class MusicProcessor:
     def run_batch_process(self):
         
         # Retrieve songs from interface and construct DF
-        song_data_list = self.interface.get_music(num_songs=self.num_songs, all_songs=True)
+        song_data_list = self.interface.get_music(num_songs=self.num_songs)
         song_data_df = self.spark.createDataFrame(Row(**song_dict) for song_dict in song_data_list)
+        
+        # Create id
         song_data_df = song_data_df.withColumnRenamed('id', 'source_id')
-        song_data_df = song_data_df.withColumn('song_id', monotonically_increasing_id())
+        str_to_int_udf = udf(self.str_to_int, returnType=IntegerType())
+        song_data_df = song_data_df.withColumn('id', str_to_int_udf('source_id'))
 
         # Build song information DF
-        song_info_df = song_data_df.select('song_id', 'source_id', 'name', 'artist', 'year')
+        song_info_df = song_data_df.select('id', 'source_id', 'name', 'artist', 'year')
         song_info_df = song_info_df.withColumn('source', lit(self.data_source))
 
         # Build song vector DF
         comp_vec_udf = udf(vector_processor(method=self.vector_method), returnType=ArrayType(DoubleType()))
         song_vec_df = song_data_df.withColumn('vector', comp_vec_udf('timbre', 'chroma'))
-        song_vec_df = song_vec_df.select('song_id', 'vector')
+        song_vec_df = song_vec_df.select('id', 'vector')
         song_vec_df = song_vec_df.withColumn('method', lit(self.vector_method))
 
         # Write vectors to the similarity search index
@@ -91,6 +95,12 @@ class MusicProcessor:
         index.train(vecs_arr)
         index.add_with_ids(vecs_arr, ids_arr)
         faiss.write_index(index, index_filename)
+
+    def str_to_int(self, in_str):
+
+        char_arr = [str(ord(c)) for c in in_str]
+        out_str = ''.join(char_arr)
+        return int(out_str)
 
 def get_parser():
 
