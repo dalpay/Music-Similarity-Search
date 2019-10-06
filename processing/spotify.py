@@ -1,5 +1,5 @@
 import spotipy
-from random import sample
+import random
 from spotipy.oauth2 import SpotifyClientCredentials
 
 
@@ -14,14 +14,16 @@ class SpotifyInterface:
         
         self.sp = spotipy.Spotify(client_credentials_manager=SpotifyClientCredentials())
 
-    def get_music(self, num_songs=50, all_songs=True):
+    def get_music(self, num_songs=50, offset=0, all_songs=True):
 
         num_items = num_songs//2 + 1
         album_songs = self.get_albums(num_items=num_items)
         playlist_songs = self.get_playlists(num_items=num_items)
         songs = album_songs + playlist_songs
         if (not all_songs and len(songs) > num_songs):
-            songs = sample(songs, num_songs)
+            random.seed(0)
+            random.shuffle(songs)
+            songs = songs[offset : offset + num_songs]
         
         return songs
 

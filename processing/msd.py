@@ -11,11 +11,11 @@ class MSDInterface:
     Retrieves song data from the Million Song Dataset.
     '''
     
-    def get_music(self, num_songs=50, all_songs=False):
+    def get_music(self, num_songs=50, offset=0, all_songs=False):
 
         files_list = self.get_files(all_data=True)
         if (not all_songs and len(files_list) > num_songs):
-            files_list = files_list[:num_songs]
+            files_list = files_list[offset : offset + num_songs]
         songs = [self.process_song(file) for file in files_list]
 
         return songs
@@ -23,7 +23,7 @@ class MSDInterface:
     def get_files(self, all_data=False):
         
         root_path = '/home/ubuntu/msd/data/'
-        subset_path = 'A/A/A/'
+        subset_path = 'A/'
 
         data_path = root_path if all_data else os.path.join(root_path, subset_path)
 
@@ -40,6 +40,7 @@ class MSDInterface:
         song_data = h5.open_h5_file_read(song_path)
         
         song_id = h5.get_song_id(song_data).decode('UTF-8')
+        song_int_id = int(h5.get_track_7digitalid(song_data))
         song_name = h5.get_title(song_data).decode('UTF-8')
         artist_name = h5.get_artist_name(song_data).decode('UTF-8')
         song_year = int(h5.get_year(song_data))
@@ -48,8 +49,9 @@ class MSDInterface:
         chroma = self.ndarray_list_to_ndlist(h5.get_segments_pitches(song_data))
         
         song_data.close()
-        song_dict = {'id': song_id, 'name': song_name, 'artist': artist_name, 
-                    'year': song_year, 'timbre': timbre, 'chroma': chroma}
+        song_dict = {'id': song_int_id, 'source_id': song_id, 'name': song_name, 
+                    'artist': artist_name, 'year': song_year, 
+                    'timbre': timbre, 'chroma': chroma}
         return song_dict
 
     def ndarray_list_to_ndlist(self, ndarry_list):
