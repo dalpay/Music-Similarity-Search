@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-
 import os
 import sys
 import argparse
@@ -14,12 +13,13 @@ from vectors import vector_processor
 from pyspark import SparkFiles
 from pyspark.sql import Row
 from pyspark.sql import SparkSession
-from pyspark.sql.types import IntegerType
+from pyspark.sql.types import StringType
 from pyspark.sql.types import DoubleType
 from pyspark.sql.types import ArrayType
 from pyspark.sql.functions import lit
 from pyspark.sql.functions import udf
 from pyspark.sql.functions import monotonically_increasing_id
+from pyspark.sql.functions import row_number
 
 
 class MusicProcessor:
@@ -30,14 +30,25 @@ class MusicProcessor:
     information and embedding vectors to a Postgres DB. 
     '''
 
-    def __init__(self, num_songs, data_source, vector_method):
+    def __init__(self, num_songs, songs_offset, data_source, vector_method):
 
         self.num_songs = num_songs
+        self.songs_offset = songs_offset
         self.data_source = data_source
         self.vector_method = vector_method
 
         self.spark = SparkSession.builder.appName('MusicSimilarity').getOrCreate()
         self.spark.sparkContext.addPyFile('vectors.py')
+
+        self.spark.conf.set('spark.dynamicAllocation.enable', 'true')
+        self.spark.conf.set('spark.dynamicAllocation.executorIdleTimeout', '2m')
+        self.spark.conf.set('spark.dynamicAllocation.minExecutors', '1')
+        self.spark.conf.set('spark.dynamicAllocation.maxExecutors', '2000')
+        self.spark.conf.set('spark.stage.maxConsecutiveAttempts', '10')
+        self.spark.conf.set('spark.memory.offHeap.enable', 'true')
+        self.spark.conf.set('spark.memory.offheap.size', '3g')
+        self.spark.conf.set('spark.executor.memory', '5g')
+        self.spark.conf.set('spark.driver.memory', '5g')
 
         self.db_writer = PostgresConnector()
 
@@ -49,14 +60,9 @@ class MusicProcessor:
     def run_batch_process(self):
         
         # Retrieve songs from interface and construct DF
-        song_data_list = self.interface.get_music(num_songs=self.num_songs)
+        song_data_list = self.interface.get_music(num_songs=self.num_songs, offset=self.songs_offset)
         song_data_df = self.spark.createDataFrame(Row(**song_dict) for song_dict in song_data_list)
         
-        # Create id
-        song_data_df = song_data_df.withColumnRenamed('id', 'source_id')
-        str_to_int_udf = udf(self.str_to_int, returnType=IntegerType())
-        song_data_df = song_data_df.withColumn('id', str_to_int_udf('source_id'))
-
         # Build song information DF
         song_info_df = song_data_df.select('id', 'source_id', 'name', 'artist', 'year')
         song_info_df = song_info_df.withColumn('source', lit(self.data_source))
@@ -96,12 +102,6 @@ class MusicProcessor:
         index.add_with_ids(vecs_arr, ids_arr)
         faiss.write_index(index, index_filename)
 
-    def str_to_int(self, in_str):
-
-        char_arr = [str(ord(c)) for c in in_str]
-        out_str = ''.join(char_arr)
-        return int(out_str)
-
 def get_parser():
 
     parser = argparse.ArgumentParser(
@@ -111,6 +111,9 @@ def get_parser():
         help='Specify the number of songs to retrieve from the data source', 
         required=True, type=int
     )
+    parser.add_argument('-o', '--offset',
+        help='Specify the offset from the beginning of the list of songs',
+        default=0, type=int)
     parser.add_argument('-s', '--source',  
         help='Select either "msd" or "spotify" as the data source', 
         choices=['msd', 'spotify'],
@@ -129,6 +132,7 @@ def main():
     parser = get_parser()
     args = parser.parse_args()
     music_processor = MusicProcessor(num_songs=args.number, 
+                                songs_offset=args.offset,
                                 data_source=args.source, 
                                 vector_method=args.method)
     music_processor.run_batch_process()
