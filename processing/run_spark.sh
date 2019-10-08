@@ -1,1 +1,8 @@
-spark-submit --master local[*] /home/ubuntu/project/processing/spark_processing.py --number 100 --source "msd" --method "gauss" --conf "spark.dynamicAllocation.enable=true" --executor-memory "5g" --driver-memory "5g"
+#!/bin/bash
+block_size=500
+for ind in {0..2000}
+do
+    block_offset=$(($block_size * $ind))
+    echo $block_offset
+    nohup spark-submit --master local[*] /home/ubuntu/project/processing/spark_processing.py --number "$block_size" --offset "$block_offset" --source "msd" --method "gauss"
+done
