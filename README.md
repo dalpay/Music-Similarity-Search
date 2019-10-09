@@ -1,14 +1,18 @@
 # Feature-Based Music Similarity Search
-This repo implements a music similarity search based on features extracted from music signals. Given song that a user likes, which may be selected from searchable list of songs already in a dataset or uploaded by the user, the system will provide a ranked list of songs most similar to the given song. The million songs dataset (300 GB of diverse songs) is used to search a wide variety of songs from different genres from around the world, both contempoary and historical.
+This repo contains the data processing pipeline for a content-based music similarity search. The pipeline indexes the Million Song Dataset by computing an embedding vector from the timbre and pitches features for each song in parallel on a Spark cluster. The song information and vectors is written to a PostgreSQL database and a locality-sensitive hashing similarity search index is constructed on the vectors through Faiss. The results of the similarity search are displayed through a frontend developed using Dash that shows the most similar songs to selected song.
 
-## Engineering Challenge
-The focus of the project is to parallelize the process of extracting audio features with particular attention on most efficiently clustering the audio features by running multiple instances of k-means in parallel to find the clusters with the lowest homogeneity. The means of the clustering with the lowest homogeneity is then used as the feature vector that characterizes a song.
+## Components and Dependencies
+- The Million Song Datset is loaded from the [public snapshot](https://aws.amazon.com/datasets/million-song-dataset/) onto **AWS EBS**.
+- A **Spark** cluster is used to compute the embeddding vectors for the songs in parallel.
+- A **PostgreSQL** database is used to store the song information and vectors.
+- **Faiss** is used to construct a LSH index and compute the similiarity search.
+- The **Spotify API** is used to retrieve new releases and featured playlists.
+- **Airflow** is used to automatically retrieve and process new music from Spotify and update the database.
+- **Dash** is used to build the frontend that display results of the similiarity search.
 
-## Tools and Dependencies
-- AWS S3 is used to host the Million Songs dataset as it is already an [Amazon Public Dataset](https://aws.amazon.com/datasets/million-song-dataset/).
-- Spark is used to process the music files in parallel. 
-- Librosa is used to extract audio features.
+![tech_stack](imgs/tech_stack.png)
 
 ## References
-1. [Million songs dataset](http://millionsongdataset.com/)
-2. []()
+1. [The Million Songs Dataset](http://millionsongdataset.com/)
+2. [Spotipy, a Python interface for the Spotify API](https://github.com/plamere/spotipy)
+3. [Faiss, a similiarity search package developed by Facebook](https://github.com/facebookresearch/faiss)
