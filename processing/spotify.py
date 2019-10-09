@@ -84,9 +84,9 @@ class SpotifyInterface:
     def extract_track_info(self, track_id):
 
         track = self.sp.track(track_id)
-        track_name = track['name']
+        track_name = track['name'].lower()
         track_year = track['album']['release_date'].split('-')[0]
-        artist_name = track['artists'][0]['name']
+        artist_name = track['artists'][0]['name'].lower()
         track_info = {'name': track_name, 'artist': artist_name, 'year': track_year}
         return track_info
 

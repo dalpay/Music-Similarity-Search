@@ -41,8 +41,8 @@ class MSDInterface:
         
         song_id = h5.get_song_id(song_data).decode('UTF-8')
         song_int_id = int(h5.get_track_7digitalid(song_data))
-        song_name = h5.get_title(song_data).decode('UTF-8')
-        artist_name = h5.get_artist_name(song_data).decode('UTF-8')
+        song_name = h5.get_title(song_data).decode('UTF-8').lower()
+        artist_name = h5.get_artist_name(song_data).decode('UTF-8').lower()
         song_year = int(h5.get_year(song_data))
         
         timbre = self.ndarray_list_to_ndlist(h5.get_segments_timbre(song_data))
