@@ -23,6 +23,10 @@ def connect():
 
     return conn
 
+external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
+app = dash.Dash(__name__, external_stylesheets=external_stylesheets)
+server = app.server
+
 project_path = '/home/ubuntu/project/processing/'
 index_filename = 'msd_gauss.index'
 index = faiss.read_index(os.path.join(project_path, index_filename))
@@ -35,8 +39,6 @@ default_df['rank'] = np.arange(1, num_initial_rows + 1)
 default_df['distance'] = np.zeros(num_initial_rows)
 default_df = default_df[['rank', 'distance', 'name', 'artist', 'year']]
 
-external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
-app = dash.Dash(__name__, external_stylesheets=external_stylesheets)
 app.layout = html.Div([
 
     html.Div(children=html.H5(children='Music Similarity Search by Deniz Alpay')),
@@ -65,7 +67,7 @@ app.layout = html.Div([
 )
 def update_table(n_clicks, song_name):
     
-    num_neighbors = 20
+    num_neighbors = 10
 
     # The button was clicked without entering a song name
     if (not song_name):
@@ -88,14 +90,14 @@ def update_table(n_clicks, song_name):
     vector = np.array(vector, dtype=np.float32)
     vector = np.expand_dims(vector, axis=0)
     dists, ids = index.search(vector, num_neighbors + 1)
-    dists = dists[0, 1:]
-    ids = ids[0, 1:]
+    dists = dists[0, :]
+    ids = ids[0, :]
     
     # Get the song info of the most similar songs
     song_info_query = "SELECT si.id, si.name, si.artist, si.year \
                     FROM song_info as si \
                     WHERE si.id in "
-    ids_format = "{}," * num_neighbors
+    ids_format = "{}," * (num_neighbors + 1)
     song_info_query += '(' + ids_format[:-1] + ')'
     song_query = song_info_query.format(*ids)
     song_df = pd.read_sql_query(song_query, conn)
@@ -105,7 +107,7 @@ def update_table(n_clicks, song_name):
     song_df['rank'] = 0
     song_df['distance'] = 0.0
     for rank, (id, dist) in enumerate(zip(ids, dists)):
-        song_df.loc[song_df['id'] == id, 'rank'] = rank + 1
+        song_df.loc[song_df['id'] == id, 'rank'] = rank
         song_df.loc[song_df['id'] == id, 'distance'] = dist
     song_df.sort_values(by=['rank'], inplace=True)
     song_df = song_df[['rank', 'distance', 'name', 'artist', 'year']]
@@ -113,4 +115,4 @@ def update_table(n_clicks, song_name):
     return song_df.to_dict('records')
 
 if __name__ == "__main__":
-    app.run_server(debug=True, host='0.0.0.0', port='5000')
+    app.run_server(debug=True, host='0.0.0.0', port='8050')
