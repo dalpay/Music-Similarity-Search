@@ -1,5 +1,5 @@
 # Feature-Based Music Similarity Search
-This repo contains the data processing pipeline for a content-based music similarity search. The pipeline indexes the Million Song Dataset by computing an embedding vector from the timbre and pitches features for each song in parallel on a Spark cluster. The song information and vectors is written to a PostgreSQL database and a locality-sensitive hashing similarity search index is constructed on the vectors through Faiss. The results of the similarity search are displayed through a frontend developed using Dash that shows the most similar songs to selected song.
+This repo contains the data processing pipeline for a content-based music similarity search. The pipeline indexes the Million Song Dataset by computing an embedding vector from the timbre and pitches features for each song in parallel on a Spark cluster. The song metadata and vectors are written to a PostgreSQL database and a locality-sensitive hashing similarity search index is constructed on the vectors through Faiss. The results of the similarity search are displayed through a frontend developed using Dash that shows the most similar songs to selected song.
 
 ## Components and Dependencies
 - The Million Song Datset is loaded from the [public snapshot](https://aws.amazon.com/datasets/million-song-dataset/) onto **AWS EBS**.
